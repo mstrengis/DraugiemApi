@@ -102,7 +102,7 @@ public class DraugiemAuth {
 					mPaymentCallback.onError("");
 				}
 			}else{
-				mPaymentCallback.onUserCanceled();
+				mPaymentCallback.onUserCanceled(); 
 			}
 			
 			return true;
@@ -114,6 +114,10 @@ public class DraugiemAuth {
 	public boolean authorizeFromCache(AuthCallback authcallback){
 		try{
 			APIKEY = mSharedPreferences.getString("apikey", null);
+			if(APIKEY == null){
+				return false;
+			}
+			
 			JSONObject userToApp = new JSONObject(mSharedPreferences.getString("user", null));
 			User u = new User(
 				userToApp.optInt("id"),
@@ -131,7 +135,7 @@ public class DraugiemAuth {
 			authcallback.onLogin(u, APIKEY);
 			return true;
 		}catch(Exception e){
-			e.printStackTrace();
+		
 		}
 		return false;
 	}
