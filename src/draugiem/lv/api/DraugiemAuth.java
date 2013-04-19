@@ -41,7 +41,6 @@ public class DraugiemAuth {
 	            MessageDigest md = MessageDigest.getInstance("SHA");
 	            md.update(signature.toByteArray());
 	            mAppHash = Base64.encodeToString(md.digest(), Base64.DEFAULT).trim();
-	            Log.e("Your Tag", mAppHash);
 	        }
 	    } catch (NameNotFoundException e) {
 
@@ -86,7 +85,6 @@ public class DraugiemAuth {
 			return true;
 		case PAYMENT:
 			if(mPaymentCallback == null){
-				Log.e("D", "mPaymentCallback is null" );
 				return false;
 			}
 			
@@ -149,7 +147,7 @@ public class DraugiemAuth {
 		try{
 			Intent draugiemIntent = new Intent("com.draugiem.lv.PAYMENT");
 			draugiemIntent.putExtra("app", APP);
-			draugiemIntent.putExtra("appikey", APIKEY);
+			draugiemIntent.putExtra("apikey", APIKEY);
 			draugiemIntent.putExtra("transId", transId);
 			draugiemIntent.putExtra("fingerprint", mAppHash);
 			mContext.startActivityForResult(draugiemIntent, PAYMENT); 
@@ -207,7 +205,6 @@ public class DraugiemAuth {
 			}
 			@Override
 			public void onError() {
-				Log.e("D", "onErrror");
 				new Handler().postDelayed(new Runnable(){
 					public void run(){
 						checkTransaction(transactionId, checkTimes, transactionCallback);
@@ -218,15 +215,14 @@ public class DraugiemAuth {
 	} 
 	
 	public void getTransactionId(long paymentId, final TransactionCallback transactionCallback){
-		Log.e("D", Request.prepareRq("app_transactionCreate", "service="+ paymentId, this).toString());
 		new Request(Request.prepareRq("app_transactionCreate", "service="+ paymentId, this), new RequestCallback(){
 			@Override
 			public void onResponse(String response) {
 				try{
-					Log.e("D", response);
 					JSONObject re = new JSONObject(response);
 					re = re.optJSONObject("app_transactionCreate");
 					re = re.optJSONObject("transaction");
+					
 					transactionCallback.onTransaction(re.optInt("id"), re.optString("link"));
 				}catch(Exception e){
 					e.printStackTrace();
@@ -235,7 +231,6 @@ public class DraugiemAuth {
 			}
 			@Override
 			public void onError() {
-				Log.e("D", "onErrror");
 				transactionCallback.onTransaction(0, null);
 			}
 		}).execute();
