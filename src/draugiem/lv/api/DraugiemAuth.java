@@ -13,6 +13,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.Signature;
+import android.os.Handler;
 import android.util.Base64;
 import android.util.Log;
 
@@ -23,8 +24,10 @@ public class DraugiemAuth {
 	private AuthCallback mAuthCallback;
 	private PaymentCallback mPaymentCallback;
 	private String mAppHash;
-	private String APP;
+	public String APP; 
+	public String APIKEY;
 	private Activity mContext;
+	private int mTimesChecked = 0, mNeedToCheck = 0;
 	public DraugiemAuth(String app, Activity context){
 		mContext = context;
 		mSharedPreferences = context.getSharedPreferences("DraugiemApi", Context.MODE_PRIVATE);
@@ -37,7 +40,7 @@ public class DraugiemAuth {
 	        for (Signature signature : info.signatures) {
 	            MessageDigest md = MessageDigest.getInstance("SHA");
 	            md.update(signature.toByteArray());
-	            mAppHash = Base64.encodeToString(md.digest(), Base64.DEFAULT);
+	            mAppHash = Base64.encodeToString(md.digest(), Base64.DEFAULT).trim();
 	            Log.e("Your Tag", mAppHash);
 	        }
 	    } catch (NameNotFoundException e) {
@@ -48,7 +51,6 @@ public class DraugiemAuth {
 	}
 	
 	public boolean onActivityResult(int requestCode, int resultCode, Intent data){
-		
 		switch(requestCode){
 		case AUTHORIZE:
 			if(resultCode == Activity.RESULT_OK){
@@ -70,8 +72,9 @@ public class DraugiemAuth {
 							userToApp.optInt("age"),
 							userToApp.optInt("sex")
 						);
-						mSharedPreferences.edit().putString("apikey", data.getStringExtra("apikey")).putString("user", userToApp.toString()).commit();						
-						mAuthCallback.onLogin(u, data.getStringExtra("apikey"));
+						mSharedPreferences.edit().putString("apikey", data.getStringExtra("apikey")).putString("user", userToApp.toString()).commit();
+						APIKEY = data.getStringExtra("apikey");
+						mAuthCallback.onLogin(u, APIKEY);
 					}catch(Exception e){
 						e.printStackTrace();
 						mAuthCallback.onError();
@@ -82,14 +85,27 @@ public class DraugiemAuth {
 			}
 			return true;
 		case PAYMENT:
+			if(mPaymentCallback == null){
+				Log.e("D", "mPaymentCallback is null" );
+				return false;
+			}
+			
 			if(resultCode == Activity.RESULT_OK){
-				mPaymentCallback.onSuccess();
-			}else{
-				if(data == null){
-					mPaymentCallback.onError("");
+				if(data.getBooleanExtra("possibleSms", false)){
+					mPaymentCallback.onPossibleSms();
+				}else if(data.getBooleanExtra("paymentSuccess", false)){
+					mPaymentCallback.onSuccess();
+				}else if(data.getBooleanExtra("paymentFailed", false)){
+					if(data.hasExtra("error")){
+						mPaymentCallback.onError(data.getStringExtra("error"));
+					}else{
+						mPaymentCallback.onError("");
+					}
 				}else{
-					mPaymentCallback.onError(data.getStringExtra("error"));
+					mPaymentCallback.onError("");
 				}
+			}else{
+				mPaymentCallback.onUserCanceled();
 			}
 			
 			return true;
@@ -100,7 +116,7 @@ public class DraugiemAuth {
 	
 	public boolean authorizeFromCache(AuthCallback authcallback){
 		try{
-			String apikey = mSharedPreferences.getString("apikey", null);
+			APIKEY = mSharedPreferences.getString("apikey", null);
 			JSONObject userToApp = new JSONObject(mSharedPreferences.getString("user", null));
 			User u = new User(
 				userToApp.optInt("id"),
@@ -115,8 +131,7 @@ public class DraugiemAuth {
 				userToApp.optInt("age"),
 				userToApp.optInt("sex")
 			);
-									
-			authcallback.onLogin(u, apikey);
+			authcallback.onLogin(u, APIKEY);
 			return true;
 		}catch(Exception e){
 			e.printStackTrace();
@@ -126,13 +141,16 @@ public class DraugiemAuth {
 	
 	public void logout(){
 		mSharedPreferences.edit().clear().commit();
+		APIKEY = null;
 	}
 	
-	public void payment(long transId, PaymentCallback callback){
+	public void payment(int transId, PaymentCallback callback){
 		this.mPaymentCallback = callback;
 		try{
 			Intent draugiemIntent = new Intent("com.draugiem.lv.PAYMENT");
 			draugiemIntent.putExtra("app", APP);
+			draugiemIntent.putExtra("appikey", APIKEY);
+			draugiemIntent.putExtra("transId", transId);
 			draugiemIntent.putExtra("fingerprint", mAppHash);
 			mContext.startActivityForResult(draugiemIntent, PAYMENT); 
 		}catch(Exception e){
@@ -151,4 +169,76 @@ public class DraugiemAuth {
 			mAuthCallback.onNoApp();
 		}
 	}
+	
+	
+	public void checkTransaction(final int transactionId, final int checkTimes, final TransactionCheckCallback transactionCallback){
+		mNeedToCheck = checkTimes;
+		mTimesChecked++; 
+		new Request(Request.prepareRq("app_transactionCheck", "id="+ transactionId, this), new RequestCallback(){
+			@Override
+			public void onResponse(String response) {
+				try{
+					JSONObject re = new JSONObject(response);
+					re = re.optJSONObject("app_transactionCheck");
+					String status = re.optString("status");
+					if(status.equals("OK")){
+						mTimesChecked = 0;
+						transactionCallback.onOk();
+						return;
+					}else if(status.equals("FAILED")){
+						mTimesChecked = 0;
+						transactionCallback.onFailed();
+						return;
+					}
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				
+				if(mTimesChecked > mNeedToCheck){
+					transactionCallback.onStopChecking();
+				}else{
+					new Handler().postDelayed(new Runnable(){
+						public void run(){
+							checkTransaction(transactionId, checkTimes, transactionCallback);
+						}
+					}, 1500);
+					
+				}
+			}
+			@Override
+			public void onError() {
+				Log.e("D", "onErrror");
+				new Handler().postDelayed(new Runnable(){
+					public void run(){
+						checkTransaction(transactionId, checkTimes, transactionCallback);
+					}
+				}, 1500);
+			}
+		}).execute();
+	} 
+	
+	public void getTransactionId(long paymentId, final TransactionCallback transactionCallback){
+		Log.e("D", Request.prepareRq("app_transactionCreate", "service="+ paymentId, this).toString());
+		new Request(Request.prepareRq("app_transactionCreate", "service="+ paymentId, this), new RequestCallback(){
+			@Override
+			public void onResponse(String response) {
+				try{
+					Log.e("D", response);
+					JSONObject re = new JSONObject(response);
+					re = re.optJSONObject("app_transactionCreate");
+					re = re.optJSONObject("transaction");
+					transactionCallback.onTransaction(re.optInt("id"), re.optString("link"));
+				}catch(Exception e){
+					e.printStackTrace();
+					transactionCallback.onTransaction(0, null);
+				}
+			}
+			@Override
+			public void onError() {
+				Log.e("D", "onErrror");
+				transactionCallback.onTransaction(0, null);
+			}
+		}).execute();
+	}
+	
 }
