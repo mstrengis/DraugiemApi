@@ -15,7 +15,6 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.Signature;
 import android.os.Handler;
 import android.util.Base64;
-import android.util.Log;
 
 public class DraugiemAuth {
 	private static final int AUTHORIZE = 1;
