@@ -35,13 +35,13 @@ public class Request extends AsyncTask<Void, Void, String>{
 	public Request(String postContent, RequestCallback reCallback){
 		mPostContent = postContent;
 		mReCallback = reCallback;
-		
+		 
 		BasicHttpParams params = new BasicHttpParams();
 		HttpConnectionParams.setTcpNoDelay(params, true);
 		HttpConnectionParams.setStaleCheckingEnabled(params, false);
 
 		HttpConnectionParams.setConnectionTimeout(params, 60 * 1000);
-		HttpConnectionParams.setSoTimeout(params, 60 * 1000);
+		HttpConnectionParams.setSoTimeout(params, 60 * 1000); 
 
 		HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
 		params.setParameter(CoreProtocolPNames.PROTOCOL_VERSION,

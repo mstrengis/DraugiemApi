@@ -138,7 +138,7 @@ public class DraugiemAuth {
 		
 		}
 		return false;
-	}
+	} 
 	
 	public void logout(){
 		mSharedPreferences.edit().clear().commit();
@@ -151,7 +151,7 @@ public class DraugiemAuth {
 			Intent draugiemIntent = new Intent("com.draugiem.lv.PAYMENT");
 			draugiemIntent.putExtra("app", APP);
 			draugiemIntent.putExtra("apikey", APIKEY);
-			draugiemIntent.putExtra("transId", transId);
+			draugiemIntent.putExtra("transId", transId); 
 			draugiemIntent.putExtra("fingerprint", mAppHash);
 			mContext.startActivityForResult(draugiemIntent, PAYMENT); 
 		}catch(Exception e){
