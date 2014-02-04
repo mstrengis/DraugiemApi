@@ -28,26 +28,21 @@ public class DraugiemAuth {
 	private Activity mContext;
 	private int mTimesChecked = 0, mNeedToCheck = 0;
 	public DraugiemAuth(String app, Activity context){
+		APP = app;
 		mContext = context;
-		mSharedPreferences = context.getSharedPreferences("DraugiemApi", Context.MODE_PRIVATE);
-		try {
-			this.APP = app;
-	        PackageInfo info = context.getPackageManager().getPackageInfo(
-	                context.getPackageName(), 
-	                PackageManager.GET_SIGNATURES);
-	        
-	        for (Signature signature : info.signatures) {
-	            MessageDigest md = MessageDigest.getInstance("SHA");
-	            md.update(signature.toByteArray());
-	            mAppHash = Base64.encodeToString(md.digest(), Base64.DEFAULT).trim();
-	        }
-	    } catch (NameNotFoundException e) {
-
-	    } catch (NoSuchAlgorithmException e) {
-
-	    }
-		
 		mSharedPreferences = context.getSharedPreferences("DraugiemApi" + APP, Context.MODE_PRIVATE);
+		try {
+			PackageInfo info = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNATURES);
+			for (Signature signature : info.signatures) {
+				MessageDigest md = MessageDigest.getInstance("SHA");
+				md.update(signature.toByteArray());
+				mAppHash = Base64.encodeToString(md.digest(), Base64.DEFAULT).trim();
+			}
+		}catch(NameNotFoundException e){
+
+		}catch(NoSuchAlgorithmException e){
+			
+		}
 	}
 	
 	public boolean onActivityResult(int requestCode, int resultCode, Intent data){
