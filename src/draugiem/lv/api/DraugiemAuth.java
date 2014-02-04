@@ -46,12 +46,18 @@ public class DraugiemAuth {
 	    } catch (NoSuchAlgorithmException e) {
 
 	    }
+		
+		mSharedPreferences = context.getSharedPreferences("DraugiemApi" + APP, Context.MODE_PRIVATE);
 	}
 	
 	public boolean onActivityResult(int requestCode, int resultCode, Intent data){
 		switch(requestCode){
 		case AUTHORIZE:
 			if(resultCode == Activity.RESULT_OK){
+				if(mAuthCallback == null){
+					return false;
+				}
+				
 				if(data == null){
 					mAuthCallback.onError();
 				}else{
