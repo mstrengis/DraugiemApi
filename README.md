@@ -1,7 +1,8 @@
 DraugiemApi
 ===========
+Include this project in your workspace 
 
-has to be included as library on your android app
+this lib has to be included as library on your android app
 
 ![alt tag](http://i.stack.imgur.com/e9uWl.jpg)
 
