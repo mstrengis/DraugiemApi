@@ -1,8 +1,13 @@
-DraugiemApi
+Draugiem.lv Android SDK
 ===========
+Draugiem.lv Android SDK for authorisation and payments
 
-http://gradleplease.appspot.com/#lv.draugiem
 
+Build with Gradle
+===========
+```
 compile 'lv.draugiem:AndroidSDK:1.0.1’
+```
 
-you can find sample app here https://github.com/mstrengis/DraugiemSampleApp 
+
+You can find sample app here https://github.com/Draugiem/draugiem-android-sdk-sampleApp
